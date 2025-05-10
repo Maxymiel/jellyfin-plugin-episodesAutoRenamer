@@ -1,0 +1,21 @@
+[
+    {
+        "category": "General",
+        "guid": "167d6b6c-1f03-44c1-8f71-86a57ca6c9c8",
+        "name": "EpisodesAutoRenamer",
+        "description": "Use regular expressions to automatically rename episode files based on custom filename patterns",
+        "owner": "Maxymiel",
+        "overview": "Regex-based episode auto-renaming",
+        "imageUrl": "https://raw.githubusercontent.com/Maxymiel/jellyfin-plugin-episodesAutoRenamer/refs/heads/main/docs/logo.png",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "First version",
+                "targetAbi": "10.10.0.0",
+                "sourceUrl": "https://github.com/Maxymiel/jellyfin-plugin-episodesAutoRenamer/releases/download/1.0.0.0/Jellyfin.Plugin.EpisodesAutoRenamer_1.0.0.0.zip",
+                "checksum": "6ab7a8c8de3ab3bfd76642e8a3ba257f",
+                "timestamp": "2025-05-10T18:25:00"
+            }
+        ]
+    }
+]
