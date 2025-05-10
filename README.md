@@ -14,7 +14,7 @@ Plugin for automatically renaming TV show episode files in your Jellyfin media l
 
 2. Add a new repository with the following details:
    * Repository name: `Episodes AutoRenamer`
-   * Repository URL: `https://github.com/Maxymiel/jellyfin-plugin-episodesAutoRenamer/raw/master/manifest.json`
+   * Repository URL: `https://raw.githubusercontent.com/Maxymiel/jellyfin-plugin-episodesAutoRenamer/main/manifest.json`
 3. Go to the `Catalog` tab
 4. Find `Episodes AutoRenamer` in the `General` section and install it
 5. Restart Jellyfin to apply the changes
