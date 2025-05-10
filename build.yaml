@@ -1,0 +1,15 @@
+---
+name: "jellyfin-plugin-episodesAutoRenamer"
+guid: "167d6b6c-1f03-44c1-8f71-86a57ca6c9c8"
+version: "1.0.0.0"
+targetAbi: "10.10.0.0"
+framework: "net8.0"
+overview: "Regex-based episode auto-renaming"
+description: >
+  Use regular expressions to automatically rename episode files based on custom filename patterns.
+category: "General"
+owner: "Maxymiel"
+artifacts:
+- "Jellyfin.Plugin.EpisodesAutoRenamer.dll"
+changelog: >
+  First version

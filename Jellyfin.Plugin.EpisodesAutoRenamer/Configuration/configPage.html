@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Episodes AutoRenamer</title>
+</head>
+
+<body>
+    <div data-role="page" class="page type-interior pluginConfigurationPage tbsConfigurationPage"
+         data-require="emby-input,emby-button">
+        <div data-role="content">
+            <div class="content-primary">
+                <form class="tbsConfigurationPage">
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h2 class="sectionTitle">Episodes AutoRenamer</h2>
+                        <a is="emby-linkbutton" class="raised button-alt headerHelpButton emby-button" target="_blank"
+                           href="https://github.com/Maxymiel">Help</a>
+                    </div>
+                    <h2>Target paths</h2>
+                    <div>
+                        <h3 class="checkboxListLabel">Select paths to include in rename:</h3>
+                        <div id="includedLocations" class="paperList checkboxList checkboxList-paperList">
+                        </div>
+                    </div>
+                    <h2>Regular expressions</h2>
+                    <div>
+                        <h3 class="inputLabel">Enter regular expressions to find episode numbers in file names.</h3>
+                        <h3 class="inputLabel">The named capture group must be called '&lt;ep&gt;', for example: '(?&lt;ep&gt;\d{1,3})'.</h3>
+                        <div id="regularExpressions"></div>
+                        <button is="emby-button" type="button" class="raised block" onclick=addRegexInput()>
+                            <span>Add new regular expression</span>
+                        </button>
+                        <span>Note: The regular expressions will be applied in order, so they should be arranged from more specific to more general.</span>
+
+                        <br />
+                        <br />
+                        <div id="readFullPathDiv"></div>
+                    </div>
+                    <h2>Target extensions</h2>
+                    <div>
+                        <h3 class="inputLabel">Enter the file extensions to be renamed, separated by a semicolon (;)</h3>
+                        <input id="includedFileExtensions" name="IncludedFileExtensions" type="text" is="emby-input" />
+                        <span>For example: .mp4;.mkv;.avi</span>
+                    </div>
+                    <br />
+
+                    <h2>Filename mask</h2>
+                    <input id="newFileMask" name="newFileMask" type="text" is="emby-input" />
+                    <br />
+                    <span>
+                        Set the filename pattern. To specify the season number, use '&lt;sn:2&gt;', and for the episode number, use '&lt;ep:3&gt;'. The numbers after the colon (e.g., ':2`, ':3') define the number of digits to format. For example, for the filename 'S02E005', use the pattern 'S&lt;sn:2&gt;E&lt;ep:3&gt;'.
+                    </span>
+                    <br />
+                    <br />
+                    <button is="emby-button" type="button" class="raised button-submit block emby-button" onclick=save()>
+                        <span>Save</span>
+                    </button>
+
+                    <button is="emby-button" type="button" class="raised block" onclick=countFilesToRename()>
+                        <span>Count files to rename</span>
+                    </button>
+
+                    <button is="emby-button" type="button" class="raised block" onclick=getFilesToRename()>
+                        <span>Get files to rename</span>
+                    </button>
+
+                    <button is="emby-button" type="button" class="raised block" onclick=renameFiles()>
+                        <span>Rename all files</span>
+                    </button>
+
+                    <div id="debugList"></div>
+                </form>
+            </div>
+        </div>
+
+
+        <script type="text/javascript">
+
+            var pluginId = "167d6b6c-1f03-44c1-8f71-86a57ca6c9c8";
+
+            function countFilesToRename() {
+                var request = {
+                    url: ApiClient.getUrl('EpisodesAutoRename/CountFilesToRename'),
+                    type: 'GET'
+                };
+
+                ApiClient.fetch(request)
+                    .then((response) => response.text())
+                    .then((text) => {
+                        Dashboard.alert("Files to rename: " + text);
+                    })
+                    .catch(function () {
+                        Dashboard.alert({
+                            message: "An unexpected error occurred"
+                        });
+                    });
+            }
+
+            function renameFiles() {
+                var request = {
+                    url: ApiClient.getUrl('EpisodesAutoRename/RenameFiles'),
+                    type: 'POST'
+                };
+
+                ApiClient.fetch(request)
+                    .then((response) => response.text())
+                    .then((text) => {
+                        Dashboard.alert("Renamed files count: " + text);
+                    })
+                    .catch(function () {
+                        Dashboard.alert({
+                            message: "An unexpected error occurred"
+                        });
+                    });
+            }
+
+            function getFilesToRename() {
+                var request = {
+                    url: ApiClient.getUrl('EpisodesAutoRename/GetFilesToRename'),
+                    type: 'GET'
+                };
+
+                ApiClient.fetch(request)
+                    .then((response) => response.text())
+                    .then((text) => {
+                        var json = JSON.parse(text);
+
+                        var container = $('#debugList');
+                        container.empty();
+
+                        var textarea = $('<textarea>').attr({
+                            class: 'emby-input'
+                        });
+
+                        textarea.val(json.list.join("\n"));
+
+                        container.append(textarea);
+                    })
+                    .catch(function () {
+                        Dashboard.alert({
+                            message: "An unexpected error occurred"
+                        });
+                    });
+            }
+
+            var config = undefined;
+
+            ApiClient.getPluginConfiguration(pluginId).then(function (savedConfig) {
+                config = savedConfig;
+
+                if (!config.IsFilled) {
+                    config.RegularExpressions = [
+                        'Season\\s(?<sn>\\d{1,3}).*S\\d{1,3}_\\d{1,3}-(?<ep>\\d{1,3})',
+                        'Season\\s(?<sn>\\d{1,3}).*\\[TV-\\d{1,3}\\]\\s-\\s(?<ep>\\d{1,3})\\s',
+                        'Season\\s(?<sn>\\d{1,3}).*S\\d{1,3}-E(?<ep>\\d{1,3})',
+                        'Season\\s(?<sn>\\d{1,3}).*S\\d{1,2}E(?<ep>\\d{1,3})',
+                        'Season\\s(?<sn>\\d{1,3}).*\\[(?<ep>\\d{1,3})\\]',
+                        'Season\\s(?<sn>\\d{1,3}).*\\-(?<ep>\\d{1,3})\\.',
+                        'Season\\s(?<sn>\\d{1,3}).(?<ep>\\d{1,3})[\\.\\s_]',
+                        'Season\\s(?<sn>\\d{1,3}).*[^\\d](?<ep>\\d{1,3})[^\\d]',
+                        'Season\\s(?<sn>\\d{1,3}).*(?<ep>\\d{1,3})'
+                    ];
+
+                    config.IncludedFileExtensions = ['.mp4', '.mkv', '.avi'];
+
+                    config.ReadFullPath = true;
+
+                    config.NewFileMask = "S<sn:2>E<ep:3>";
+
+                    config.IsFilled = true;
+                }
+
+                ApiClient.getVirtualFolders().then(function (virtualFolders) {
+                    loadVirtualFolders(config, virtualFolders);
+                    loadregularExpressions(config);
+                    addReadFullPathCheckbox(config);
+
+                    $('#includedFileExtensions').val(config.IncludedFileExtensions.join(";"));
+                    $('#newFileMask').val(config.NewFileMask);
+                });
+            });
+
+            function loadregularExpressions(config) {
+                for (var i = 0, length = config.RegularExpressions.length; i < length; i++) {
+                    var regex = config.RegularExpressions[i];
+                    addRegexInput(regex);
+                }
+            }
+
+            function addRegexInput(value = null) {
+                var container = $('<div>').attr({
+                    class: 'regex-container',
+                    style: 'display: flex; align-items: center; margin-bottom: 8px;'
+                });
+
+                var input = $('<input>').attr({
+                    class: 'regularExpression',
+                    type: 'text',
+                    is: 'emby-input',
+                    style: 'margin-right: 8px'
+                });
+
+                if (value !== null) {
+                    input.val(value);
+                }
+
+                var removeButton = $('<button>').attr({
+                    type: 'button',
+                    class: 'button-delete emby-button',
+                    style: 'padding: .6em 1em; margin: 0'
+                }).text('-');
+
+                removeButton.on('click', function () {
+                    container.remove();
+                });
+
+                container.append(input);
+                container.append(removeButton);
+
+                $('#regularExpressions').append(container);
+            }
+
+            function removeRegexInput(input) {
+                $(input).remove();
+            }
+
+            function loadVirtualFolders(config, virtualFolders) {
+                var container = $('#includedLocations');
+                container.empty();
+
+                var folders = $('<div>').attr('data-role', 'controlgroup');
+
+                for (var i = 0, length = virtualFolders.length; i < length; i++) {
+                    var virtualFolder = virtualFolders[i];
+                    var folderElements = getFolderElements(config, virtualFolder, i);
+                    folders.append(folderElements);
+                }
+
+                container.append(folders).trigger('create');
+            }
+
+            function getFolderElements(currentUserConfig, virtualFolder, index) {
+                var elements = $();
+
+                for (var i = 0, length = virtualFolder.Locations.length; i < length; i++) {
+                    var id = 'chkFolder' + index + '_' + i;
+                    var location = virtualFolder.Locations[i];
+
+                    var isChecked = currentUserConfig.IncludedLocations.some(function (current) {
+                        return current.toLowerCase() === location.toLowerCase();
+                    });
+
+                    var checkbox = $('<input>').attr({
+                        is: 'emby-checkbox',
+                        class: 'chkLibrary',
+                        type: 'checkbox',
+                        'data-mini': 'true',
+                        id: id,
+                        name: id,
+                        'data-location': location
+                    });
+
+                    if (isChecked) {
+                        checkbox.prop('checked', true);
+                    }
+
+                    var label = $('<label>').append(
+                        checkbox,
+                        $('<span>').text(location + ' - ' + virtualFolder.Name)
+                    );
+
+                    elements = elements.add(label);
+                }
+
+                return elements;
+            }
+
+            function addReadFullPathCheckbox(currentUserConfig) {
+
+                var checkbox = $('<input>').attr({
+                    is: 'emby-checkbox',
+                    type: 'checkbox',
+                    class: "readFullPath"
+                });
+
+                if (currentUserConfig.ReadFullPath) {
+                    checkbox.prop('checked', true);
+                }
+
+                var label = $('<label>').append(
+                    checkbox,
+                    $('<span>').text('Read full file path when determining episode name')
+                );
+
+                $('#readFullPathDiv').append(label);
+            }
+
+
+            function save() {
+                var includedFileExtensions = $('#includedFileExtensions').val().split(";");
+                var readFullPath = $('.readFullPath').is(':checked');
+                var newFileMask = $('#newFileMask').val();
+
+                var includedLocations = $('.chkLibrary:checked').map(function () {
+                    return this.getAttribute('data-location');
+                }).get();
+
+                var regularExpressions = $('.regularExpression').map(function () {
+                    return this.value;
+                }).get();
+
+
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.IncludedLocations = includedLocations;
+                    config.RegularExpressions = regularExpressions;
+                    config.IncludedFileExtensions = includedFileExtensions;
+                    config.ReadFullPath = readFullPath;
+                    config.NewFileMask = newFileMask;
+                    config.IsFilled = true;
+                    ApiClient.updatePluginConfiguration(pluginId, config).then(function (res) {
+                        Dashboard.processPluginConfigurationUpdateResult(res);
+                    });
+                });
+            }
+
+            $('.traktConfigurationPage').on('pageinit', function () {
+                var page = this;
+                $('#traktConfigurationForm', page).on('submit', function () {
+                    save();
+                    return false;
+                });
+            });
+        </script>
+    </div>
+</body>
+
+</html>
